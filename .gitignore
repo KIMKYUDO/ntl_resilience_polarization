@@ -29,3 +29,26 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
+# Large/local data
+data/
+logs/
+*.tar.gz
+*.zip
+
+# Model checkpoints
+*.pt
+*.joblib
+
+# Large prediction/map files
+outputs/predictions/
+outputs/models/
+outputs/maps/*.parquet
+outputs/maps/*.geojson
+outputs/maps/*.gpkg
+outputs/maps/*with_centroid.csv
+outputs/final_bundle/*.parquet
+
+# Python cache
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
