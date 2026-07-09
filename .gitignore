@@ -5,7 +5,7 @@ data/processed/
 
 # outputs
 outputs/
-models/
+/models/
 reports/
 figures/
 
