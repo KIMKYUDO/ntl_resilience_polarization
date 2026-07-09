@@ -1,0 +1,28 @@
+model:
+  name: tcn_multitask_fusion
+  sequence_model: TCN
+  input_windows:
+    - early3
+    - early6
+  tcn:
+    hidden_channels:
+      - 64
+      - 96
+      - 128
+    kernel_size: 3
+    dropout: 0.15
+  tabular_mlp:
+    hidden_dims:
+      - 128
+      - 64
+    dropout: 0.15
+  fusion_mlp:
+    hidden_dims:
+      - 192
+      - 96
+    dropout: 0.20
+  heads:
+    delayed_classification: true
+    percentile_regression: true
+    no_recovery_12m: true
+    no_recovery_24m: true

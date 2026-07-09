@@ -1,0 +1,19 @@
+model:
+  name: transformer_multitask_fusion
+  sequence_model: TransformerEncoder
+  transformer:
+    d_model: 128
+    nhead: 4
+    num_layers: 2
+    dim_feedforward: 256
+    dropout: 0.15
+  tabular_mlp:
+    hidden_dims:
+      - 128
+      - 64
+    dropout: 0.15
+  fusion_mlp:
+    hidden_dims:
+      - 192
+      - 96
+    dropout: 0.20

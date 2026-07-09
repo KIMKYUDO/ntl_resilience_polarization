@@ -1,0 +1,18 @@
+model:
+  name: gru_multitask_fusion
+  sequence_model: GRU
+  gru:
+    hidden_size: 128
+    num_layers: 2
+    bidirectional: false
+    dropout: 0.15
+  tabular_mlp:
+    hidden_dims:
+      - 128
+      - 64
+    dropout: 0.15
+  fusion_mlp:
+    hidden_dims:
+      - 192
+      - 96
+    dropout: 0.20

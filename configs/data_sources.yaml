@@ -1,0 +1,27 @@
+data_sources:
+  ntl:
+    primary: NASA Black Marble VNP46A2
+    preferred_temporal_resolution: daily_to_monthly
+    local_raw_dir: data/raw/ntl/vnp46a2_daily_or_monthly_ingest
+  cyclone:
+    track: IBTrACS
+    local_raw_file: data/raw/events/ibtracs_tracks.csv
+  rainfall:
+    source: GPM IMERG
+    local_raw_dir: data/raw/rainfall/gpm_imerg
+  flood:
+    sources:
+      - Sentinel-1 flood extent
+      - Global Flood Database
+    local_raw_dirs:
+      - data/raw/flood/sentinel1_flood
+      - data/raw/flood/global_flood_database
+  socioeconomic:
+    population: data/raw/socioeconomic/population
+    builtup: data/raw/socioeconomic/builtup
+    roads: data/raw/socioeconomic/roads
+    electrification: data/raw/socioeconomic/electrification
+  boundaries:
+    districts: data/raw/boundaries/india_admin_districts
+    states: data/raw/boundaries/india_states
+    coast_rivers: data/raw/boundaries/india_coastline_rivers

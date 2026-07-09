@@ -1,0 +1,29 @@
+# Google Earth Engine export configuration
+# Upload the generated India grid to an Earth Engine FeatureCollection asset for national-scale runs.
+
+earth_engine:
+  project: global-terrain-501005-d6
+  grid_asset: projects/global-terrain-501005-d6/assets/india_grid_5km
+  drive_folder: ntl_resilience_exports
+  grid_id_property: grid_id
+
+datasets:
+  vnp46a2: NASA/VIIRS/002/VNP46A2
+  gpm_imerg: NASA/GPM_L3/IMERG_V07
+  ghsl_pop: JRC/GHSL/P2023A/GHS_POP
+  ghsl_built: JRC/GHSL/P2023A/GHS_BUILT_S
+
+exports:
+  ntl:
+    scale_m: 500
+    tile_scale: 4
+    output_csv_pattern: data/raw/ntl/vnp46a2_daily_or_monthly_ingest/grid_daily_ntl_YYYY_MM.csv
+  rainfall:
+    scale_m: 11132
+    tile_scale: 4
+    output_csv: data/raw/rainfall/gpm_imerg/grid_event_gpm_rainfall.csv
+  ghsl_static:
+    epoch_year: 2020
+    scale_m: 100
+    tile_scale: 4
+    output_csv: data/raw/socioeconomic/grid_static_features.csv

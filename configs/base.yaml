@@ -1,0 +1,197 @@
+project:
+  name: ntl_resilience_polarization
+  country: India
+  disaster_scope:
+    - tropical_cyclone
+    - urban_flooding
+  interpretation: >
+    Quantify post-disaster recovery polarization using NTL time-series and
+    identify long-term delayed recovery risk areas from early recovery signals.
+
+paths:
+  data_raw: data/raw
+  data_interim: data/interim
+  data_processed: data/processed
+  outputs: outputs
+
+spatial:
+  grid_resolution_km: 5
+  crs_geographic: EPSG:4326
+  crs_projected: EPSG:7755
+  sample_unit: event_id_x_grid_id
+  admin_metadata_level: district
+
+# Month indexing convention:
+# pre-event: -12 ... -1
+# event month: 0
+# post-event: 1 ... 24
+# full measurement sequence length = 37
+time_window:
+  pre_months: 12
+  event_months: 1
+  post_months_for_measurement: 24
+  early_input_post_months:
+    - 3
+    - 6
+  full_sequence_months: 37
+
+ntl:
+  source: VNP46A2
+  temporal_resolution_raw: daily
+  temporal_resolution_model: monthly
+  aggregation:
+    daily_to_monthly: median
+    grid_reduce: mean
+  channels:
+    - raw_radiance
+    - cleaned_radiance
+    - baseline_normalized_radiance
+    - radiance_anomaly
+    - recovery_ratio
+    - valid_obs_count
+  baseline:
+    period: pre_event_12_months
+    statistic: median
+    min_valid_months: 8
+  quality:
+    use_quality_flags: true
+    min_valid_obs_per_month: 5
+
+events:
+  include_types:
+    - tropical_cyclone
+    - urban_flooding
+  country_filter: India
+  event_catalog_sources:
+    - EM_DAT
+    - India_official
+    - IBTrACS
+  hazard_sources:
+    cyclone_track: IBTrACS
+    rainfall: GPM_IMERG
+    flood: Sentinel1_or_GlobalFloodDatabase
+
+targets:
+  delayed_recovery:
+    slow_quantile: 0.8
+    label_name: y_delayed_slowest_20pct
+    event_relative: true
+  delayed_recovery_secondary:
+    slow_quantile: 0.7
+    label_name: y_delayed_slowest_30pct
+    event_relative: true
+  recovery_percentile:
+    label_name: recovery_delay_percentile
+    scale:
+      - 0.0
+      - 1.0
+  no_recovery:
+    horizons_months:
+      - 12
+      - 24
+    threshold_recovery_ratio: 0.9
+  censored_t50:
+    cap_months: 24
+    use_as_main_regression_target: false
+
+features:
+  static_grid:
+    - population_density
+    - built_up_ratio
+    - road_density
+    - distance_to_major_road_km
+    - distance_to_city_center_km
+    - electrification_proxy
+    - high_income_proxy
+    - elevation_m
+    - slope_deg
+    - distance_to_coast_km
+    - distance_to_river_km
+  event_hazard:
+    - cyclone_distance_to_track_km
+    - cyclone_max_wind_near_grid
+    - rainfall_accum_event_mm
+    - rainfall_accum_pre_event_3d_mm
+    - rainfall_accum_post_event_7d_mm
+    - flood_exposure_ratio
+    - flood_duration_days
+    - flooded_pixel_ratio
+  allowed_event_context:
+    - event_year
+    - event_month
+    - event_type_encoded
+    - is_coastal_event
+  metadata:
+    - event_id
+    - grid_id
+    - district_id
+    - district_name
+    - state_name
+    - event_year
+    - event_month
+
+validation:
+  primary_split: leave_one_event_out
+  additional_splits:
+    - leave_one_year_out
+    - spatial_block_split
+  forbid_random_grid_split_within_event: true
+  leakage_checks:
+    - no_future_ntl_in_input
+    - no_same_event_in_train_test_for_loo
+    - no_duplicate_grid_event_rows
+    - no_target_columns_in_features
+
+models:
+  baseline:
+    - logistic_regression
+    - random_forest
+    - lightgbm
+  deep_learning:
+    primary: tcn_multitask_fusion
+    comparisons:
+      - gru_multitask_fusion
+      - transformer_multitask_fusion
+  ensemble:
+    method: probability_average
+    members:
+      - lightgbm
+      - tcn_multitask_fusion
+
+training:
+  random_seed: 42
+  batch_size: 256
+  max_epochs: 100
+  early_stopping_patience: 12
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  loss_weights:
+    delayed_cls: 1.0
+    percentile_reg: 0.5
+    no_recovery_12m_cls: 0.35
+    no_recovery_24m_cls: 0.35
+  class_imbalance:
+    use_pos_weight: true
+    use_focal_loss: false
+
+
+gee:
+  datasets:
+    vnp46a2: NASA/VIIRS/002/VNP46A2
+    gpm_imerg: NASA/GPM_L3/IMERG_V07
+    ghsl_pop: JRC/GHSL/P2023A/GHS_POP
+    ghsl_built: JRC/GHSL/P2023A/GHS_BUILT_S
+  export:
+    drive_folder: ntl_resilience_exports
+    grid_id_property: grid_id
+    vnp46a2_scale_m: 500
+    gpm_scale_m: 11132
+    ghsl_scale_m: 100
+    tile_scale: 4
+
+outputs:
+  save_predictions: true
+  save_event_level_metrics: true
+  save_risk_map_ready_csv: true
+  save_recovery_trajectory_plots: true
+  save_polarization_maps: true

@@ -1,0 +1,18 @@
+target_columns:
+  delayed_classification: y_delayed_slowest_20pct
+  percentile_regression: recovery_delay_percentile
+  no_recovery_12m: y_no_recovery_12m
+  no_recovery_24m: y_no_recovery_24m
+
+auxiliary_descriptive_columns:
+  - y_delayed_slowest_30pct
+  - capped_t50_months
+  - is_t50_censored
+  - recovery_speed
+  - resilience_index
+  - recovery_polarization_index
+
+target_policy:
+  main_regression_target: recovery_delay_percentile
+  do_not_use_raw_t50_as_main_regression_target: true
+  delayed_recovery_definition: event_relative_slowest_20_percent

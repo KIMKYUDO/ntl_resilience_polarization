@@ -1,0 +1,16 @@
+validation:
+  primary: leave_one_event_out
+  secondary:
+    - leave_one_year_out
+    - spatial_block_split
+  leakage_rules:
+    no_random_grid_split_within_same_event: true
+    no_post_24_ntl_in_early_prediction_input: true
+    no_target_columns_in_features: true
+    no_duplicate_event_grid_rows: true
+  top_k_policy_metric:
+    enabled: true
+    k_fractions:
+      - 0.05
+      - 0.10
+      - 0.20

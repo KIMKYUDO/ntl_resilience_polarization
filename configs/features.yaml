@@ -1,0 +1,46 @@
+sequence_channels:
+  - raw_radiance
+  - cleaned_radiance
+  - baseline_normalized_radiance
+  - radiance_anomaly
+  - recovery_ratio
+  - valid_obs_count
+
+static_tabular_features:
+  - population_density
+  - built_up_ratio
+  - road_density
+  - distance_to_major_road_km
+  - distance_to_city_center_km
+  - electrification_proxy
+  - high_income_proxy
+  - elevation_m
+  - slope_deg
+  - distance_to_coast_km
+  - distance_to_river_km
+
+event_hazard_features:
+  - cyclone_distance_to_track_km
+  - cyclone_max_wind_near_grid
+  - rainfall_accum_event_mm
+  - rainfall_accum_pre_event_3d_mm
+  - rainfall_accum_post_event_7d_mm
+  - flood_exposure_ratio
+  - flood_duration_days
+  - flooded_pixel_ratio
+
+event_context_features:
+  - event_year
+  - event_month
+  - event_type_encoded
+  - is_coastal_event
+
+forbidden_feature_patterns:
+  - target
+  - y_
+  - recovery_score_12m
+  - recovery_score_24m
+  - recovery_delay_percentile
+  - capped_t50
+  - is_t50_censored
+  - post_24
