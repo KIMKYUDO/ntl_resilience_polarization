@@ -7,7 +7,7 @@ Core interpretation:
 > This is not a framework for claiming that AI precisely predicts exact disaster recovery duration.  
 > It is a framework for quantifying recovery polarization and identifying delayed-recovery risk areas using early NTL recovery patterns and spatial/socioeconomic/hazard exposure features.
 
-## Final research scope
+## 1. Final research scope
 
 - Country: India
 - Disaster types: tropical cyclones + urban flooding
@@ -17,54 +17,349 @@ Core interpretation:
 - Auxiliary target: event-relative recovery delay percentile
 - Additional targets: no recovery within 12/24 months
 - Primary validation: Leave-One-Event-Out validation
-- Early prediction input: pre-event window + event month + early post-disaster NTL trajectory, especially early 3-month input
-- Final single model interpretation: **Transformer multi-task sequence model**
+- Main early-prediction setting: **pre-12 months + event month + post-3 months**
+- Final single-model interpretation: **Transformer multi-task sequence model**
 - Additional sequence models: **TCN** and **GRU**
 - Baseline model: **LightGBM tabular baseline**
-- Combined output: **ensemble prediction**, used as a robustness/combined-risk result rather than a separate trained model checkpoint
+- Combined output: **ensemble prediction**, used as a robustness/combined-risk result rather than a separate trained checkpoint
 
-## Final model interpretation
+## 2. What the trained model predicts
 
-The final model family predicts grid-level slow-recovery risk from early post-disaster NTL trajectories.
+The trained model predicts **grid-level delayed-recovery risk** for a disaster event.
 
-Input:
+For each sample:
 
-- Early NTL time-series features
-- Tabular/static/event-level features
-- `event_id × grid_id` sample structure
+```text
+sample = event_id × grid_id
+```
 
-Outputs:
+The early-3-month sequence input uses:
 
-- `pred_delayed_prob`: probability of delayed recovery
-- `pred_recovery_percentile`: predicted recovery-delay percentile
-- `pred_no_recovery_12m_prob`: predicted no-recovery risk within 12 months
-- `pred_no_recovery_24m_prob`: predicted no-recovery risk within 24 months
+```text
+pre-12 months + event month + post-3 months = 16 monthly time steps
+```
 
-The strongest single model for delayed-recovery discrimination was the **Transformer**, which achieved the highest delayed-recovery AUROC/AUPRC.  
-GRU achieved the highest delayed-recovery F1.  
-TCN showed strong performance in recovery-percentile regression and long-term risk ranking.  
-The ensemble result is useful as a combined prediction layer, but it is not a separate `.pt` model checkpoint.
+The processed sequence tensor used in the final early-3 setting had this structure:
 
-## Final performance summary
+```text
+X_seq_early3: samples × 16 time steps × 6 sequence features
+```
 
-| model       |   delayed_auroc |   delayed_auprc |   delayed_f1 |   delayed_recall |   delayed_top30_recall |   percentile_mae |   percentile_rmse |   percentile_spearman |   no12_auroc |   no12_auprc |   no24_auroc |   no24_auprc |
-|:------------|----------------:|----------------:|-------------:|-----------------:|-----------------------:|-----------------:|------------------:|----------------------:|-------------:|-------------:|-------------:|-------------:|
-| Ensemble    |          0.9174 |          0.7262 |       0.7739 |           0.862  |                 0.9241 |           0.1008 |            0.1358 |                0.4805 |       0.7574 |       0.0086 |       0.764  |       0.007  |
-| GRU         |          0.8994 |          0.6058 |       0.7816 |           0.8318 |                 0.9042 |           0.0957 |            0.1507 |                0.4028 |       0.9112 |       0.0258 |       0.9331 |       0.0351 |
-| LightGBM    |          0.5018 |          0.1829 |       0.2593 |           0.3929 |                 0.3137 |           0.1838 |            0.2251 |                0.0587 |       0.6989 |       0.0042 |       0.6472 |       0.0017 |
-| TCN         |          0.9198 |          0.667  |       0.7695 |           0.8374 |                 0.9168 |           0.0899 |            0.138  |                0.4739 |       0.8724 |       0.0511 |       0.8801 |       0.0441 |
-| Transformer |          0.9264 |          0.7369 |       0.7752 |           0.9019 |                 0.9324 |           0.1036 |            0.144  |                0.4369 |       0.9215 |       0.0244 |       0.9374 |       0.0168 |
+The model also uses tabular/static/event-level features after preprocessing.
+
+The main output is:
+
+```text
+pred_delayed_prob
+```
+
+This is a 0–1 risk score for delayed recovery.
+
+Interpretation:
+
+```text
+0.10 = low predicted delayed-recovery risk
+0.50 = moderate predicted delayed-recovery risk
+0.90 = high predicted delayed-recovery risk
+```
+
+However, this value should be interpreted as a **model risk score** or **probability-like screening score**, not as an exact real-world probability.  
+The most reliable use is **ranking grids by relative risk** and identifying high-risk areas for monitoring.
+
+## 3. Definition of actual delayed recovery
+
+The main binary target is:
+
+```text
+y_delayed_slowest_20pct
+```
+
+This target is event-relative.
+
+For each disaster event:
+
+```text
+1. Compute recovery-delay behavior for all grids in that event.
+2. Rank grids by delayed recovery.
+3. Label the slowest-recovering 20% as delayed recovery = 1.
+4. Label the remaining grids as delayed recovery = 0.
+```
+
+Therefore, the model is not predicting a universal fixed duration threshold.  
+It is predicting whether a grid belongs to the **slowest-recovering group within the same disaster event**.
+
+## 4. Probability score, rank, and risk interpretation
+
+The model output is a probability-like score:
+
+```text
+pred_delayed_prob ∈ [0, 1]
+```
+
+Ranking is obtained by sorting this score:
+
+```text
+higher pred_delayed_prob → higher delayed-recovery risk rank
+```
+
+For example:
+
+```text
+grid A: 0.93
+grid B: 0.72
+grid C: 0.25
+```
+
+Risk ranking:
+
+```text
+A > B > C
+```
+
+Thus:
+
+- The model output is a **risk score**.
+- The spatial prioritization result is a **ranked list of grids**.
+- Top-k metrics evaluate whether the highest-risk ranked grids contain the actual delayed-recovery grids.
+
+## 5. Leave-One-Event-Out validation
+
+The project uses Leave-One-Event-Out validation.
+
+With seven disaster events, the validation process is:
+
+```text
+Fold 1: train on 6 events, test on the held-out event
+Fold 2: train on another set of 6 events, test on another held-out event
+...
+Fold 7: repeat until every event has been used as the test event once
+```
+
+This means the model is evaluated on disaster events that were held out from training.
+
+A precise interpretation is:
+
+> For each held-out disaster event, the model predicts grid-level delayed-recovery risk from early NTL trajectories, and the predictions are compared with the event-specific observed delayed-recovery labels.
+
+## 6. Final model performance
+
+| Model | Delayed AUROC | Delayed AUPRC | Delayed F1 | Delayed Recall | Top-30% Recall | Percentile MAE | Percentile RMSE | Percentile Spearman |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Ensemble | 0.9174 | 0.7262 | 0.7739 | 0.8620 | 0.9241 | 0.1008 | 0.1358 | 0.4805 |
+| GRU | 0.8994 | 0.6058 | 0.7816 | 0.8318 | 0.9042 | 0.0957 | 0.1507 | 0.4028 |
+| LightGBM | 0.5018 | 0.1829 | 0.2593 | 0.3929 | 0.3137 | 0.1838 | 0.2251 | 0.0587 |
+| TCN | 0.9198 | 0.6670 | 0.7695 | 0.8374 | 0.9168 | 0.0899 | 0.1380 | 0.4739 |
+| Transformer | 0.9264 | 0.7369 | 0.7752 | 0.9019 | 0.9324 | 0.1036 | 0.1440 | 0.4369 |
+
+Interpretation:
+
+- Transformer achieved the strongest delayed-recovery discrimination by AUROC/AUPRC.
+- GRU achieved the strongest delayed-recovery F1.
+- TCN was strong in recovery-percentile prediction and long-term non-recovery ranking.
+- LightGBM performed close to random for delayed-recovery AUROC, indicating that static/tabular features alone were not sufficient.
+- Sequence-based models substantially outperformed the tabular baseline, suggesting that early NTL temporal dynamics contain key recovery information.
+
+## 7. Metric definitions
+
+### Precision
+
+Among grids predicted as delayed recovery, the fraction that were actually delayed recovery.
+
+### Recall
+
+Among actual delayed-recovery grids, the fraction detected by the model.
+
+### F1 score
+
+The harmonic mean of precision and recall.
+
+### Balanced accuracy
+
+Average of sensitivity and specificity. It is more reliable than plain accuracy when classes are imbalanced.
+
+### AUROC
+
+Measures how well the model ranks actual delayed-recovery grids above non-delayed grids.
+
+```text
+0.5 = random ranking
+1.0 = perfect ranking
+```
+
+### AUPRC
+
+Area under the precision-recall curve. This is especially important when the positive class is rare.
+
+### Top-20% recall / Top-30% recall
+
+The model ranks all grids by `pred_delayed_prob`.
+
+Top-k recall measures:
+
+```text
+How many actual delayed-recovery grids are captured within the top 20% or top 30% highest-risk grids?
+```
+
+This is important for disaster monitoring because decision-makers often prioritize the highest-risk areas.
+
+### MAE
+
+Mean absolute error for `recovery_delay_percentile`. Lower is better.
+
+### RMSE
+
+Root mean squared error for `recovery_delay_percentile`. Lower is better and large errors are penalized more strongly.
+
+### Spearman correlation
+
+Measures whether the predicted recovery-delay ranking is similar to the actual recovery-delay ranking. Higher is better.
+
+## 8. Long-term no-recovery targets
+
+Additional targets:
+
+```text
+y_no_recovery_12m
+y_no_recovery_24m
+```
+
+These labels were extremely imbalanced.
+
+Therefore:
+
+- Threshold-based precision/recall/F1 can be unstable or zero.
+- AUROC, AUPRC, and top-risk ranking are more appropriate.
+- These targets should be reported as supplementary long-term risk indicators, not as the main claim.
+
+## 9. Spatial risk-map interpretation
+
+Final map files:
+
+```text
+outputs/maps/slow_recovery_risk_map.geojson
+outputs/maps/slow_recovery_risk_map.gpkg
+outputs/maps/slow_recovery_risk_map_with_centroid.csv
+outputs/maps/slow_recovery_risk_grid_aggregated.geojson
+```
+
+Final figure files:
+
+```text
+outputs/figures/map_predicted_slow_recovery_risk.png
+outputs/figures/map_top10_slow_recovery_risk.png
+```
+
+### Aggregated risk map
+
+![Predicted slow-recovery risk map](outputs/figures/map_predicted_slow_recovery_risk.png)
+
+The aggregated map uses:
+
+```text
+map_risk(grid) = max(pred_delayed_prob across evaluated events for that grid)
+```
+
+Therefore, red intensity is **not the sum of all event risks**.  
+It represents the maximum predicted delayed-recovery risk observed for that grid across the evaluated events.
+
+Interpretation:
+
+> A darker red grid means that the grid had high predicted delayed-recovery risk in at least one evaluated disaster event.
+
+### Top 10% high-risk map
+
+![Top 10% slow-recovery risk map](outputs/figures/map_top10_slow_recovery_risk.png)
+
+This map highlights the top 10% of grids by aggregated predicted risk.
+
+## 10. Event-level predicted vs actual maps
+
+For more interpretable spatial validation, generate event-specific maps.
+
+For each model and event, compare:
+
+```text
+Predicted map:
+pred_delayed_prob
+
+Actual map:
+y_delayed_slowest_20pct
+```
+
+For the Fani event, the recommended outputs are:
+
+```text
+outputs/figures/event_model_compare/fani/transformer_fani_predicted_risk.png
+outputs/figures/event_model_compare/fani/transformer_fani_actual_delayed.png
+outputs/figures/event_model_compare/fani/gru_fani_predicted_risk.png
+outputs/figures/event_model_compare/fani/gru_fani_actual_delayed.png
+outputs/figures/event_model_compare/fani/tcn_fani_predicted_risk.png
+outputs/figures/event_model_compare/fani/tcn_fani_actual_delayed.png
+outputs/figures/event_model_compare/fani/lgbm_fani_predicted_risk.png
+outputs/figures/event_model_compare/fani/lgbm_fani_actual_delayed.png
+```
+
+The actual map is identical across models because the ground-truth label does not depend on the model.  
+The predicted map differs by model.
 
 
-- Highest delayed-recovery AUROC: `Transformer` = `0.9264`
-- Highest delayed-recovery AUPRC: `Transformer` = `0.7369`
-- Highest delayed-recovery F1: `GRU` = `0.7816`
-- Highest delayed-recovery Top-30% recall: `Transformer` = `0.9324`
-- Lowest recovery-percentile MAE: `TCN` = `0.0899`
-- Highest recovery-percentile Spearman correlation: `Ensemble` = `0.4805`
+## Fani 2019 model-level predicted vs actual map comparison
 
+This section compares the spatial prediction patterns for the Fani 2019 held-out event.
 
-## Generated model files
+For each model, the left panel shows:
+
+```text
+pred_delayed_prob
+```
+
+The right panel shows:
+
+```text
+y_delayed_slowest_20pct
+```
+
+The actual delayed-recovery label is the same across models because it is the observed target.  
+The predicted risk map differs by model.
+
+### Fani map summary
+
+| model       | event_keyword   |   mapped_grids |   actual_delayed_rate |   pred_delayed_prob_mean |   pred_delayed_prob_p90 |   pred_delayed_prob_min |   pred_delayed_prob_max |
+|:------------|:----------------|---------------:|----------------------:|-------------------------:|------------------------:|------------------------:|------------------------:|
+| transformer | fani            |         127284 |              0.211354 |                 0.166977 |                0.922348 |                4.4e-05  |                0.999821 |
+| gru         | fani            |         127284 |              0.211354 |                 0.103009 |                0.523716 |                0        |                0.999921 |
+| tcn         | fani            |         127284 |              0.211354 |                 0.10756  |                0.522813 |                0        |                1        |
+| lgbm        | fani            |         127284 |              0.211354 |                 0.480512 |                0.677845 |                0.065909 |                0.903892 |
+| ensemble    | fani            |         127284 |              0.211354 |                 0.251683 |                0.615075 |                0.022427 |                0.961474 |
+
+Interpretation:
+
+- Transformer, GRU, TCN, and ensemble produce sparse high-risk patterns that can be compared against the actual delayed-recovery label.
+- LightGBM produces a smoother and less discriminative spatial pattern, consistent with its weaker delayed-recovery AUROC.
+- The ensemble map combines model predictions and should be interpreted as a robustness-oriented combined risk layer, not as a separate trained checkpoint.
+- Darker predicted areas indicate higher `pred_delayed_prob`, while red areas in the actual map indicate grids labeled as delayed recovery.
+
+### Transformer
+
+![Fani Transformer predicted vs actual](outputs/figures/event_model_compare/fani/transformer_fani_predicted_vs_actual.png)
+
+### GRU
+
+![Fani GRU predicted vs actual](outputs/figures/event_model_compare/fani/gru_fani_predicted_vs_actual.png)
+
+### TCN
+
+![Fani TCN predicted vs actual](outputs/figures/event_model_compare/fani/tcn_fani_predicted_vs_actual.png)
+
+### LightGBM
+
+![Fani LightGBM predicted vs actual](outputs/figures/event_model_compare/fani/lgbm_fani_predicted_vs_actual.png)
+
+### Ensemble
+
+![Fani Ensemble predicted vs actual](outputs/figures/event_model_compare/fani/ensemble_fani_predicted_vs_actual.png)
+
+## 11. Generated model files
 
 Deep learning models are stored as PyTorch checkpoints:
 
@@ -98,50 +393,7 @@ Prediction result files: .parquet / .csv
 Map outputs: .geojson / .gpkg / .png
 ```
 
-## Final spatial risk-map outputs
-
-The final risk map joins `slow_recovery_risk_map_ready.parquet` with the 5 km India grid geometry.
-
-Input geometry:
-
-```text
-data/interim/grid/india_grid_5km.shp
-data/interim/grid/india_grid_5km.dbf
-data/interim/grid/india_grid_5km.shx
-data/interim/grid/india_grid_5km.prj
-```
-
-Generated map files:
-
-```text
-outputs/maps/slow_recovery_risk_map.geojson
-outputs/maps/slow_recovery_risk_map.gpkg
-outputs/maps/slow_recovery_risk_map_with_centroid.csv
-outputs/maps/slow_recovery_risk_grid_aggregated.geojson
-```
-
-Generated figure files:
-
-```text
-outputs/figures/map_predicted_slow_recovery_risk.png
-outputs/figures/map_top10_slow_recovery_risk.png
-```
-
-Interpretation:
-
-- `map_predicted_slow_recovery_risk.png` visualizes grid-level predicted slow-recovery risk aggregated across events.
-- `map_top10_slow_recovery_risk.png` highlights the top 10% predicted slow-recovery risk areas.
-- The aggregated map uses the maximum predicted delayed-recovery probability across evaluated events for each grid cell. Therefore, it should be interpreted as a spatial high-risk screening layer across events, not as a claim that all regions simultaneously experienced delayed recovery.
-
-Suggested figure captions:
-
-**Figure. Predicted slow-recovery risk map aggregated across disaster events.**  
-Each grid cell represents the maximum predicted delayed-recovery probability across the evaluated events.
-
-**Figure. Top 10% predicted slow-recovery risk areas.**  
-Highlighted grid cells indicate locations with the highest predicted delayed-recovery probabilities across events.
-
-## Final execution order
+## 12. Full execution order
 
 ```bash
 python scripts/00_init_project.py
@@ -166,53 +418,12 @@ python scripts/50_evaluate_all.py
 python scripts/60_make_outputs.py
 ```
 
-## Windows post-processing for maps
-
-The Windows local post-processing script used for final map generation was:
-
-```text
-make_slow_recovery_risk_map_windows_v4.py
-```
-
-It avoids Windows Tcl/Tk matplotlib errors by forcing the non-GUI Agg backend.
-
-The successful final status was:
-
-```text
-Risk shape: (890953, 13)
-Unique risk grid_id: 127284
-Unique grid geometry grid_id: 127284
-Matched unique grid_id: 127284
-Missing geometry rows: 0
-[DONE] Map generation completed successfully.
-```
-
-## RunPod-modified source files
-
-The key files modified during RunPod execution were:
-
-```text
-src/ntlpol/models/train_dl.py
-src/ntlpol/models/losses.py
-```
-
-They are included in the final output archive if the archive was created with:
-
-```bash
-tar -czf ntl_resilience_final_outputs_<timestamp>.tar.gz \
-  outputs \
-  logs \
-  configs \
-  src/ntlpol/models/train_dl.py \
-  src/ntlpol/models/losses.py
-```
-
-## Leakage rule
+## 13. Leakage rule
 
 The full pre-12 + event + post-24 NTL sequence is allowed only for recovery measurement and target construction.  
-Early prediction models must use only pre-12 + event + post-3 or post-6 input windows.
+Early prediction models must use only pre-12 + event + early post-disaster input windows such as post-3 or post-6.
 
-## Real data extraction additions
+## 14. Real data extraction additions
 
 The project includes Earth Engine export scripts for the real-data bridge:
 
@@ -226,28 +437,3 @@ python scripts/80_run_after_raw_downloads.py --help
 ```
 
 See `REAL_DATA_WORKFLOW.md` for the exact order after uploading the grid to Earth Engine.
-
-## Recommended external report-writing inputs
-
-For writing the final report, use:
-
-```text
-README_UPDATED.md
-performance_summary.csv
-tcn_early3_event_metrics.csv
-gru_early3_event_metrics.csv
-transformer_early3_event_metrics.csv
-lgbm_event_metrics.csv
-lgbm_feature_importance.csv
-map_predicted_slow_recovery_risk.png
-map_top10_slow_recovery_risk.png
-```
-
-Avoid uploading large model checkpoint files unless the report writer specifically needs to inspect model internals:
-
-```text
-*.pt
-*.joblib
-large prediction parquet files
-full logs
-```
