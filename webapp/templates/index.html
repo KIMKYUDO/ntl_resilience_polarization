@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Disaster Recovery Intelligence</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+          <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+
+        <div class="logo">
+            <i class="fa-solid fa-satellite"></i>
+            <div>
+                <h2>ResilienceAI</h2>
+                <span>Recovery Intelligence</span>
+            </div>
+        </div>
+
+        <nav>
+            <a href="#" class="nav-item active">
+                <i class="fa-solid fa-chart-line"></i>
+                Overview
+            </a>
+
+            <a href="#risk-map" class="nav-item">
+                <i class="fa-solid fa-map-location-dot"></i>
+                Recovery Risk Map
+            </a>
+
+            <a href="#analysis" class="nav-item">
+                <i class="fa-solid fa-magnifying-glass-chart"></i>
+                Recovery Analysis
+            </a>
+
+            <a href="#models" class="nav-item">
+                <i class="fa-solid fa-brain"></i>
+                Model Insights
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <p>NTL Recovery Intelligence</p>
+            <span>Research Prototype · 2026</span>
+        </div>
+
+    </aside>
+
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+        <!-- Header -->
+        <header>
+
+            <div>
+                <p class="eyebrow">DISASTER RECOVERY MONITORING</p>
+                <h1>Post-Disaster Recovery Intelligence</h1>
+
+                <p class="subtitle">
+                    Satellite-driven analysis of recovery patterns using
+                    Nighttime Light time-series data.
+                </p>
+            </div>
+
+            <div class="status">
+                <span class="status-dot"></span>
+                System Active
+            </div>
+
+        </header>
+
+
+        <!-- KPI Cards -->
+        <section class="kpi-grid">
+
+            <div class="kpi-card">
+                <div class="kpi-icon">
+                    <i class="fa-solid fa-hurricane"></i>
+                </div>
+
+                <div>
+                    <span>Disaster Events</span>
+                    <h2 id="eventCount">7</h2>
+                    <p>India · 2019–2021</p>
+                </div>
+            </div>
+
+
+            <div class="kpi-card">
+                <div class="kpi-icon">
+                    <i class="fa-solid fa-brain"></i>
+                </div>
+
+                <div>
+                    <span>Primary Model</span>
+                    <h2 id="primaryModel">Transformer</h2>
+                    <p>Sequence-based prediction</p>
+                </div>
+            </div>
+
+
+            <div class="kpi-card">
+                <div class="kpi-icon">
+                    <i class="fa-solid fa-bullseye"></i>
+                </div>
+
+                <div>
+                    <span>Delayed Recovery AUROC</span>
+                    <h2 id="auroc">92.64%</h2>
+                    <p>Leave-One-Event-Out</p>
+                </div>
+            </div>
+
+
+            <div class="kpi-card">
+                <div class="kpi-icon">
+                    <i class="fa-solid fa-chart-simple"></i>
+                </div>
+
+                <div>
+                    <span>Top-30% Recall</span>
+                    <h2 id="recall">93.24%</h2>
+                    <p>High-risk identification</p>
+                </div>
+            </div>
+
+        </section>
+
+
+        <!-- Main Dashboard Grid -->
+        <section class="dashboard-grid">
+
+            <!-- Risk Map -->
+            <div class="panel map-panel" id="risk-map">
+
+                <div class="panel-header">
+
+                    <div>
+                        <span class="section-label">SPATIAL INTELLIGENCE</span>
+                        <h2>Recovery Risk Map</h2>
+                    </div>
+
+                    <select id="eventSelector">
+                        <option value="all">All Events</option>
+                        <option value="amphan">Cyclone Amphan</option>
+                        <option value="nivar">Cyclone Nivar</option>
+                        <option value="tauktae">Cyclone Tauktae</option>
+                        <option value="yaas">Cyclone Yaas</option>
+                        <option value="fani">Cyclone Fani</option>
+                        <option value="hyderabad">Hyderabad Flood</option>
+                        <option value="chennai">Chennai Flood</option>
+                    </select>
+
+                </div>
+
+
+               <div id="map"></div>
+
+<div class="map-legend">
+    <span><i class="risk-low"></i> Low Risk</span>
+    <span><i class="risk-medium"></i> Medium Risk</span>
+    <span><i class="risk-high"></i> High Risk</span>
+</div>
+
+            </div>
+
+
+            <!-- Risk Summary -->
+            <div class="panel risk-panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <span class="section-label">RISK SUMMARY</span>
+                        <h2>Recovery Status</h2>
+                    </div>
+
+                </div>
+
+
+                <div class="risk-score">
+
+                    <div class="risk-circle">
+                        <span>HIGH</span>
+                        <strong>Risk</strong>
+                    </div>
+
+                    <p>
+                        Areas with elevated predicted probability of
+                        delayed post-disaster recovery.
+                    </p>
+
+                </div>
+
+
+                <div class="risk-list">
+
+                    <div>
+                        <span>Delayed Recovery</span>
+                        <strong>Screening</strong>
+                    </div>
+
+                    <div>
+                        <span>Prediction Window</span>
+                        <strong>3 Months</strong>
+                    </div>
+
+                    <div>
+                        <span>Grid Resolution</span>
+                        <strong>5 km</strong>
+                    </div>
+
+                    <div>
+                        <span>Validation</span>
+                        <strong>7 Events</strong>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- Analysis -->
+        <section class="panel analysis-panel" id="analysis">
+
+            <div class="panel-header">
+
+                <div>
+                    <span class="section-label">RECOVERY ANALYTICS</span>
+                    <h2>Analyze Disaster Recovery</h2>
+
+                    <p>
+                        Select a disaster event to explore predicted
+                        delayed-recovery patterns.
+                    </p>
+                </div>
+
+            </div>
+
+            <div class="analysis-content">
+
+                <select id="analysisEvent">
+
+                    <option>Select Disaster Event</option>
+                    <option>Cyclone Amphan (2020)</option>
+                    <option>Cyclone Nivar (2020)</option>
+                    <option>Cyclone Tauktae (2021)</option>
+                    <option>Cyclone Yaas (2021)</option>
+                    <option>Cyclone Fani (2019)</option>
+                    <option>Hyderabad Flood (2020)</option>
+                    <option>Chennai Flood (2021)</option>
+
+                </select>
+
+                <button id="analyzeButton">
+                    <i class="fa-solid fa-chart-line"></i>
+                    Analyze Recovery
+                </button>
+
+            </div>
+
+            <div id="analysisResult"></div>
+
+        </section>
+
+
+        <!-- Model Insights -->
+        <section class="panel model-panel" id="models">
+
+            <div class="panel-header">
+
+                <div>
+                    <span class="section-label">AI MODEL PERFORMANCE</span>
+                    <h2>Model Insights</h2>
+                </div>
+
+            </div>
+
+            <div class="model-grid">
+
+                <div class="model-card best">
+                    <span>PRIMARY MODEL</span>
+                    <h3>Transformer</h3>
+                    <strong>92.64%</strong>
+                    <p>Delayed Recovery AUROC</p>
+                </div>
+
+                <div class="model-card">
+                    <span>SEQUENCE MODEL</span>
+                    <h3>TCN</h3>
+                    <strong>91.98%</strong>
+                    <p>Delayed Recovery AUROC</p>
+                </div>
+
+                <div class="model-card">
+                    <span>SEQUENCE MODEL</span>
+                    <h3>GRU</h3>
+                    <strong>89.94%</strong>
+                    <p>Delayed Recovery AUROC</p>
+                </div>
+
+                <div class="model-card">
+                    <span>BASELINE</span>
+                    <h3>LightGBM</h3>
+                    <strong>50.18%</strong>
+                    <p>Delayed Recovery AUROC</p>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+</body>
+
+</html>
